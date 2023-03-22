@@ -1,4 +1,5 @@
 import { Box, Button, Card, IconButton, Stack } from "@mui/material";
+import axios from "axios";
 import React, { useRef, useState } from "react";
 import ReactPlayer from "react-player";
 
@@ -40,11 +41,12 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ url, hideControls }) => {
     );
   };
 
-  const handlePause = () => {
+  const handlePause = async () => {
     console.log(
       "User paused video at time: ",
       player.current?.getCurrentTime()
     );
+    // await axios.post(`/api/sessions/${sessionId}/events/${uuidv4()}`, {});
   };
 
   const handleBuffer = () => {
@@ -109,3 +111,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ url, hideControls }) => {
 };
 
 export default VideoPlayer;
+
+function uuidv4() {
+  throw new Error("Function not implemented.");
+}
