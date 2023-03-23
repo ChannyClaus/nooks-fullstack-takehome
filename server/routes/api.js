@@ -41,7 +41,6 @@ router.get("/sessions/:sessionId/current", async (req, res) => {
 });
 
 router.post("/sessions/:sessionId/events", async (req, res) => {
-  console.log("req.body: ", req.body);
   await events.insertOne({
     id: uuidv4(),
     session_id: req.body.sessionId,

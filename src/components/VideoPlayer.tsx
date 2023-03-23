@@ -35,7 +35,6 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   useEffect(() => {
     axios.get(`/api/sessions/${sessionId}/current`).then((response) => {
       if (response.data) {
-        console.log(response.data);
         player.current?.seekTo(response.data.playedSeconds, "seconds");
         setPlaying(response.data.playing);
       }
