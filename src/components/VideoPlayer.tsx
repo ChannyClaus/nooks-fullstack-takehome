@@ -1,6 +1,6 @@
 import { Box, Button, Card, IconButton, Stack } from "@mui/material";
 import axios from "axios";
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import ReactPlayer from "react-player";
 
 const ws = new WebSocket("ws://localhost:8000");
@@ -24,13 +24,26 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   hideControls,
   sessionId,
 }) => {
-  const [playing, setPlaying] = useState(true);
+  const [playing, setPlaying] = useState(false);
   const [seek, setSeek] = useState(0);
   const [isReady, setIsReady] = useState(false);
   const player = useRef<ReactPlayer>(null);
 
+  // query the database on initial load
+  // so those who join the sync later can
+  // retrieve the current state of the session.
+  useEffect(() => {
+    axios.get(`/api/sessions/${sessionId}/current`).then((response) => {
+      if (response.data) {
+        console.log(response.data);
+        player.current?.seekTo(response.data.playedSeconds, "seconds");
+        setPlaying(response.data.playing);
+      }
+    });
+  }, []);
+
   ws.addEventListener("message", (event) => {
-    const { sessionId, type, data } = JSON.parse(event.data);
+    const { type, data } = JSON.parse(event.data);
     switch (type) {
       case "play":
         setPlaying(true);
@@ -52,7 +65,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       sessionId,
       type,
       timestamp: player.current?.getCurrentTime(),
-      ...(data && data),
+      data,
     });
   };
 
@@ -92,7 +105,6 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     loaded: number;
     loadedSeconds: number;
   }) => {
-    console.log("state: ", state);
     await writeEvent(EventType.Progress, state);
   };
 

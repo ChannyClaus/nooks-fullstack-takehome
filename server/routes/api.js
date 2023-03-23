@@ -17,7 +17,31 @@ router.get("/sessions/:sessionId/events/:eventId", async (req, res) => {
   res.json(await events.findById(req.params.eventId));
 });
 
+router.get("/sessions/:sessionId/current", async (req, res) => {
+  const sessionEvents = await events.find({ session_id: req.params.sessionId });
+  const currentState = {};
+  for (const sessionEvent of sessionEvents) {
+    if (sessionEvent.type === "progress") {
+      console.log("sessionEvent: ", sessionEvent);
+      currentState["playedSeconds"] = sessionEvent.data.playedSeconds;
+      break;
+    }
+  }
+  for (const sessionEvent of sessionEvents) {
+    if (sessionEvent.type === "play") {
+      currentState["playing"] = true;
+      break;
+    } else if (sessionEvent.type === "pause") {
+      currentState["playing"] = false;
+      break;
+    }
+  }
+
+  res.json(currentState);
+});
+
 router.post("/sessions/:sessionId/events", async (req, res) => {
+  console.log("req.body: ", req.body);
   await events.insertOne({
     id: uuidv4(),
     session_id: req.body.sessionId,

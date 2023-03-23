@@ -13,6 +13,17 @@ class Model {
     return response.rows[0];
   };
 
+  find = async function (filter) {
+    const response = await db.query(`
+    SELECT * FROM ${this.tableName} WHERE
+    ${Object.entries(filter)
+      .map(([k, v]) => `${k}='${v}'`)
+      .toString()}
+    ORDER BY created_at DESC
+  `);
+    return response.rows;
+  };
+
   insertOne = async function (record) {
     await db.query(`
     INSERT INTO ${this.tableName} (${Object.keys(record).toString()})
