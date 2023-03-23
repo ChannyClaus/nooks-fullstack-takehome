@@ -1,21 +1,15 @@
+
 const express = require("express");
-const app = express();
 const cors = require("cors");
+const { createServer } = require('http')
+const { db } = require('./db')
 
-const { Client } = require("pg");
-
-const db = new Client({
-  user: "postgres",
-  host: "localhost",
-  database: "postgres",
-  port: 5432,
-});
-db.connect();
+const port = process.env.PORT || 8000;
+const app = express();
+export const server = createServer(app)
 
 app.use(cors());
 app.use(express.json());
-
-const port = process.env.PORT || 8000;
 
 const router = express.Router();
 
@@ -61,7 +55,8 @@ router.get("/replay/:sessionId", (req, res) => {
 
 app.use("/api", router);
 
-app.listen(port, async () => {
+
+server.listen(port, async () => {
   // run database migrations
 
   // `IF NOT EXISTS` was included for better iteration,
