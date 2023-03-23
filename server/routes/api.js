@@ -4,7 +4,7 @@ const sessions = require("../models/sessions");
 const router = express.Router();
 
 router.get("/sessions/:sessionId", async (req, res) => {
-  res.json(await sessions.findById(req.params.id));
+  res.json(await sessions.findById(req.params.sessionId));
 });
 
 router.post("/sessions/", async (req, res) => {

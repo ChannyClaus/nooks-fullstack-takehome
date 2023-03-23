@@ -5,13 +5,17 @@ const tableName = "sessions";
 const findById = async function (id) {
   const response = await db.query(`
     SELECT * FROM ${tableName}
-    WHERE id = ${id}
+    WHERE id = '${id}'
   `);
   return response.rows[0];
 };
 
 const insertOne = async function (record) {
   console.log("insertOne: ", record);
+  console.log(
+    "${Object.keys(record).toString()}: ",
+    Object.keys(record).toString()
+  );
   await db.query(`
     INSERT INTO ${tableName} (${Object.keys(record).toString()})
     VALUES (${Object.values(record)
