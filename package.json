@@ -29,6 +29,8 @@
   },
   "scripts": {
     "start": "react-scripts start",
+    "start:server": "npm run start:db && sleep 5 && nodemon --watch 'server/**' server/app.js",
+    "start:db": "docker run -d -p 5432:5432 -e POSTGRES_HOST_AUTH_METHOD=trust postgres",
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
