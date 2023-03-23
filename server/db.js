@@ -22,7 +22,9 @@ const migration = async () => {
     id UUID PRIMARY KEY,
     session_id UUID,
     type TEXT,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    timestamp NUMERIC NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    data JSON 
   );
 `);
 };

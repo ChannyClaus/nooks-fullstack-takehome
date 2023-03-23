@@ -1,4 +1,5 @@
 import { Box, Button, Card, IconButton, Stack } from "@mui/material";
+import axios from "axios";
 import React, { useRef, useState } from "react";
 import ReactPlayer from "react-player";
 
@@ -6,6 +7,14 @@ interface VideoPlayerProps {
   url: string;
   sessionId: string;
   hideControls?: boolean;
+}
+
+enum EventType {
+  Play = "play",
+  Pause = "pause",
+  Buffer = "buffer",
+  Progress = "progress",
+  End = "end",
 }
 
 const VideoPlayer: React.FC<VideoPlayerProps> = ({
@@ -17,12 +26,16 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const [isReady, setIsReady] = useState(false);
   const player = useRef<ReactPlayer>(null);
 
-  const handleReady = () => {
-    setIsReady(true);
+  const writeEvent = async function (type: EventType, data?: Object) {
+    return axios.post(`/api/sessions/${sessionId}/events`, {
+      sessionId,
+      type,
+      timestamp: player.current?.getCurrentTime(),
+    });
   };
 
-  const handleEnd = () => {
-    console.log("Video ended");
+  const handleReady = () => {
+    setIsReady(true);
   };
 
   const handleSeek = (seconds: number) => {
@@ -38,33 +51,29 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     );
   };
 
-  const handlePlay = () => {
-    console.log(
-      "User played video at time: ",
-      player.current?.getCurrentTime()
-    );
+  const handleEnd = async () => {
+    await writeEvent(EventType.End);
+  };
+
+  const handlePlay = async () => {
+    await writeEvent(EventType.Play);
   };
 
   const handlePause = async () => {
-    console.log(
-      "User paused video at time: ",
-      player.current?.getCurrentTime()
-    );
-    // await axios.post(`/api/sessions/${sessionId}/events/${uuidv4()}`, {});
+    await writeEvent(EventType.Pause);
   };
 
-  const handleBuffer = () => {
-    console.log("Video buffered");
+  const handleBuffer = async () => {
+    await writeEvent(EventType.Buffer);
   };
 
-  const handleProgress = (state: {
+  const handleProgress = async (state: {
     played: number;
     playedSeconds: number;
     loaded: number;
     loadedSeconds: number;
   }) => {
-    console.log(sessionId);
-    console.log("Video progress: ", state);
+    await writeEvent(EventType.Progress, state);
   };
 
   return (
