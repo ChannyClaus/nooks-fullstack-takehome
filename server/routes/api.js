@@ -10,7 +10,7 @@ router.get("/sessions/:sessionId", async (req, res) => {
 
 router.post("/sessions", async (req, res) => {
   await sessions.insertOne({ id: req.body.sessionId, link: req.body.link });
-  res.send(200);
+  res.sendStatus(200);
 });
 
 router.get("/sessions/:sessionId/events/:eventId", async (req, res) => {
@@ -25,7 +25,7 @@ router.post("/sessions/:sessionId/events", async (req, res) => {
     timestamp: req.body.timestamp,
     ...(req.body.data && { data: JSON.stringify(req.body.data) }),
   });
-  res.send(200);
+  res.sendStatus(200);
 });
 
 module.exports = { router };

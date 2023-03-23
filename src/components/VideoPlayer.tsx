@@ -3,6 +3,7 @@ import axios from "axios";
 import React, { useRef, useState } from "react";
 import ReactPlayer from "react-player";
 
+const ws = new WebSocket("ws://localhost:8000");
 interface VideoPlayerProps {
   url: string;
   sessionId: string;
@@ -22,15 +23,28 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   hideControls,
   sessionId,
 }) => {
-  const [hasJoined, setHasJoined] = useState(false);
+  const [playing, setPlaying] = useState(true);
   const [isReady, setIsReady] = useState(false);
   const player = useRef<ReactPlayer>(null);
 
+  ws.addEventListener("message", (event) => {
+    const state = JSON.parse(event.data);
+    if (state.playing) {
+      setPlaying(true);
+    } else {
+      setPlaying(false);
+    }
+  });
+
+  // player.current?.seekTo(100, "seconds");
+
   const writeEvent = async function (type: EventType, data?: Object) {
+    ws.send(JSON.stringify({ sessionId, type }));
     return axios.post(`/api/sessions/${sessionId}/events`, {
       sessionId,
       type,
       timestamp: player.current?.getCurrentTime(),
+      ...(data && data),
     });
   };
 
@@ -88,13 +102,13 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       <Box
         width="100%"
         height="100%"
-        display={hasJoined ? "flex" : "none"}
+        display={playing ? "flex" : "none"}
         flexDirection="column"
       >
         <ReactPlayer
           ref={player}
           url={url}
-          playing={hasJoined}
+          playing={playing}
           controls={!hideControls}
           onReady={handleReady}
           onEnded={handleEnd}
@@ -108,14 +122,14 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
           style={{ pointerEvents: hideControls ? "none" : "auto" }}
         />
       </Box>
-      {!hasJoined && isReady && (
+      {!playing && isReady && (
         // Youtube doesn't allow autoplay unless you've interacted with the page already
         // So we make the user click "Join Session" button and then start playing the video immediately after
         // This is necessary so that when people join a session, they can seek to the same timestamp and start watching the video with everyone else
         <Button
           variant="contained"
           size="large"
-          onClick={() => setHasJoined(true)}
+          onClick={() => setPlaying(true)}
         >
           Watch Session
         </Button>
