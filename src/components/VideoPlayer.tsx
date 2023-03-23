@@ -1,14 +1,18 @@
 import { Box, Button, Card, IconButton, Stack } from "@mui/material";
-import axios from "axios";
 import React, { useRef, useState } from "react";
 import ReactPlayer from "react-player";
 
 interface VideoPlayerProps {
   url: string;
+  sessionId: string;
   hideControls?: boolean;
 }
 
-const VideoPlayer: React.FC<VideoPlayerProps> = ({ url, hideControls }) => {
+const VideoPlayer: React.FC<VideoPlayerProps> = ({
+  url,
+  hideControls,
+  sessionId,
+}) => {
   const [hasJoined, setHasJoined] = useState(false);
   const [isReady, setIsReady] = useState(false);
   const player = useRef<ReactPlayer>(null);
@@ -59,6 +63,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ url, hideControls }) => {
     loaded: number;
     loadedSeconds: number;
   }) => {
+    console.log(sessionId);
     console.log("Video progress: ", state);
   };
 
@@ -111,7 +116,3 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ url, hideControls }) => {
 };
 
 export default VideoPlayer;
-
-function uuidv4() {
-  throw new Error("Function not implemented.");
-}
