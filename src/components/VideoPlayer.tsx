@@ -151,12 +151,6 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
           Watch Session
         </Button>
       )}
-      <input
-        value={seek}
-        onChange={(e) => setSeek(e.target.value as any)}
-        type="text"
-      ></input>
-      <button onClick={handleSeek}>seek (in seconds)</button>
     </Box>
   );
 };
