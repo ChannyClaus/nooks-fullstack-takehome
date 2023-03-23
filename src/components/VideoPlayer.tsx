@@ -16,6 +16,7 @@ enum EventType {
   Buffer = "buffer",
   Progress = "progress",
   End = "end",
+  Seek = "seek",
 }
 
 const VideoPlayer: React.FC<VideoPlayerProps> = ({
@@ -24,22 +25,29 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   sessionId,
 }) => {
   const [playing, setPlaying] = useState(true);
+  const [seek, setSeek] = useState(0);
   const [isReady, setIsReady] = useState(false);
   const player = useRef<ReactPlayer>(null);
 
   ws.addEventListener("message", (event) => {
-    const state = JSON.parse(event.data);
-    if (state.playing) {
-      setPlaying(true);
-    } else {
-      setPlaying(false);
+    const { sessionId, type, data } = JSON.parse(event.data);
+    switch (type) {
+      case "play":
+        setPlaying(true);
+        break;
+      case "pause":
+        setPlaying(false);
+        break;
+      case "seek":
+        player.current?.seekTo(data.seek, "seconds");
+        break;
+      default:
+        break;
     }
   });
 
-  // player.current?.seekTo(100, "seconds");
-
   const writeEvent = async function (type: EventType, data?: Object) {
-    ws.send(JSON.stringify({ sessionId, type }));
+    ws.send(JSON.stringify({ sessionId, type, data }));
     return axios.post(`/api/sessions/${sessionId}/events`, {
       sessionId,
       type,
@@ -52,17 +60,14 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     setIsReady(true);
   };
 
-  const handleSeek = (seconds: number) => {
+  const handleSeek = async () => {
     // Ideally, the seek event would be fired whenever the user moves the built in Youtube video slider to a new timestamp.
     // However, the youtube API no longer supports seek events (https://github.com/cookpete/react-player/issues/356), so this no longer works
 
     // You'll need to find a different way to detect seeks (or just write your own seek slider and replace the built in Youtube one.)
     // Note that when you move the slider, you still get play, pause, buffer, and progress events, can you use those?
-
-    console.log(
-      "This never prints because seek decetion doesn't work: ",
-      seconds
-    );
+    await writeEvent(EventType.Seek, { seek });
+    player.current?.seekTo(seek, "seconds");
   };
 
   const handleEnd = async () => {
@@ -87,6 +92,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     loaded: number;
     loadedSeconds: number;
   }) => {
+    console.log("state: ", state);
     await writeEvent(EventType.Progress, state);
   };
 
@@ -134,6 +140,12 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
           Watch Session
         </Button>
       )}
+      <input
+        value={seek}
+        onChange={(e) => setSeek(e.target.value as any)}
+        type="text"
+      ></input>
+      <button onClick={handleSeek}>seek (in seconds)</button>
     </Box>
   );
 };
