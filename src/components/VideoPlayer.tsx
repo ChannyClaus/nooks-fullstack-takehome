@@ -8,9 +8,6 @@ interface VideoPlayerProps {
 }
 
 const ws = new WebSocket("ws://localhost:8000");
-// ws.onopen = function () {
-//   ws.send(JSON.stringify({ type: "init" }));
-// };
 
 enum EventType {
   Ready = "ready",
@@ -54,26 +51,27 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ url, hideControls }) => {
           setPlaying(true);
         }
         break;
-      // case "init":
-      //   player.current?.seekTo(data?.position || 0, "seconds");
-      //   setPlaying(data?.playing || false);
-      //   setInitialized(true);
-      //   break;
+      case "init":
+        player.current?.seekTo(data?.position || 0, "seconds");
+        setPlaying(data?.playing || false);
+        setInitialized(true);
+        break;
       default:
         break;
     }
   });
 
   const sendEvent = async (type: EventType, data?: Object) => {
-    // console.log("sentEvent: ", type, data, initialized);
-    // if (!initialized) {
-    //   return;
-    // }
+    console.log("sentEvent: ", type, data, initialized);
+    if (!initialized) {
+      return;
+    }
     ws.send(JSON.stringify({ type, data }));
   };
 
   const handleReady = () => {
     setIsReady(true);
+    ws.send(JSON.stringify({ type: "init" }));
     sendEvent(EventType.Ready);
   };
 
