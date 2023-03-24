@@ -54,7 +54,10 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ url, hideControls }) => {
 
   ws.addEventListener("message", (event) => {
     const { type, data } = JSON.parse(event.data);
-    messageHandlers[type](data);
+    const handler = messageHandlers[type];
+    if (handler) {
+      handler(data);
+    }
   });
 
   const sendEvent = async (type: EventType, data?: Object) => {
