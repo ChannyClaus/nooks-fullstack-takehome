@@ -8,9 +8,9 @@ interface VideoPlayerProps {
 }
 
 const ws = new WebSocket("ws://localhost:8000");
-ws.onopen = function () {
-  ws.send(JSON.stringify({ type: "init" }));
-};
+// ws.onopen = function () {
+//   ws.send(JSON.stringify({ type: "init" }));
+// };
 
 enum EventType {
   Ready = "ready",
@@ -35,7 +35,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ url, hideControls }) => {
 
   ws.addEventListener("message", (event) => {
     const { type, data } = JSON.parse(event.data);
-    console.log("receviedEvent: ", type, data);
+    // console.log("receviedEvent: ", type, data);
     switch (type) {
       case "play":
         setPlaying(true);
@@ -47,27 +47,28 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ url, hideControls }) => {
       // detect the `seek` event.
       case "buffer":
         // if it's been 2 seconds since last time we seek-ed.
+        const { position } = JSON.parse(data);
         if ((new Date() as any) - (lastSeeked as any) > 2000) {
           lastSeeked = new Date();
-          player.current?.seekTo(data.position, "seconds");
+          player.current?.seekTo(position, "seconds");
           setPlaying(true);
         }
         break;
-      case "init":
-        player.current?.seekTo(data?.position || 0, "seconds");
-        setPlaying(data?.playing || false);
-        setInitialized(true);
-        break;
+      // case "init":
+      //   player.current?.seekTo(data?.position || 0, "seconds");
+      //   setPlaying(data?.playing || false);
+      //   setInitialized(true);
+      //   break;
       default:
         break;
     }
   });
 
   const sendEvent = async (type: EventType, data?: Object) => {
-    console.log("sentEvent: ", type, data, initialized);
-    if (!initialized) {
-      return;
-    }
+    // console.log("sentEvent: ", type, data, initialized);
+    // if (!initialized) {
+    //   return;
+    // }
     ws.send(JSON.stringify({ type, data }));
   };
 

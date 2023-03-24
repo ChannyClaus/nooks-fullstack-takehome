@@ -22,7 +22,7 @@ const initWebSocket = function (server) {
         sessionStateMap.set(sessionId, { playing: false, position: 0 });
       }
       const updatedState = Object.assign(sessionStateMap.get(sessionId), {});
-      console.log(new Date(), type, updatedState);
+      console.log("state: ", new Date(), type, updatedState);
       switch (type) {
         case "progress":
           updatedState["position"] = JSON.parse(data).playedSeconds;
