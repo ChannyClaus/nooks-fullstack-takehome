@@ -15,6 +15,7 @@ const initWebSocket = function (server) {
     ws.on("error", console.error);
 
     ws.on("message", function message(payload) {
+      // TODO: actually pass the `sessionId` (currently null or undefined)
       const { sessionId, type, data } = JSON.parse(decodeURIComponent(payload));
 
       // update the state
