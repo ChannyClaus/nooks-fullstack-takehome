@@ -1,7 +1,6 @@
 import { Box, Button, Card, IconButton, Stack } from "@mui/material";
 import React, { useRef, useState } from "react";
 import ReactPlayer from "react-player";
-import { debounce } from "../debounce";
 
 interface VideoPlayerProps {
   url: string;
@@ -25,12 +24,8 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ url, hideControls }) => {
   const [isReady, setIsReady] = useState(false);
   const player = useRef<ReactPlayer>(null);
 
-  const debounced = debounce((data: any) => {
-    console.log("inside debounce");
-    // player.current?.seekTo(data.position, "seconds");
-    // setPlaying(true);
-  }, 2000);
-
+  // used to prevent `seek` handler from firing too rapidly.
+  var lastSeeked = new Date();
   ws.addEventListener("message", (event) => {
     const { type, data } = JSON.parse(event.data);
     switch (type) {
@@ -43,7 +38,11 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ url, hideControls }) => {
       // hack to overcome the absence of easy ways to
       // detect the `seek` event.
       case "buffer":
-        debounced(data);
+        if ((new Date() as any) - (lastSeeked as any) > 2000) {
+          lastSeeked = new Date();
+          player.current?.seekTo(data.position, "seconds");
+          setPlaying(true);
+        }
         break;
       default:
         break;
