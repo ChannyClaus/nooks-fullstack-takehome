@@ -30,39 +30,34 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ url, hideControls }) => {
   // used to prevent `seek` handler from firing too rapidly.
   var lastSeeked = new Date();
 
+  const messageHandlers: any = {
+    play: (data: any) => {
+      setPlaying(true);
+    },
+    pause: (data: any) => {
+      setPlaying(false);
+    },
+    buffer: (data: any) => {
+      const { position } = JSON.parse(data);
+      if ((new Date() as any) - (lastSeeked as any) > 2000) {
+        lastSeeked = new Date();
+        player.current?.seekTo(position, "seconds");
+        setPlaying(true);
+      }
+    },
+    init: (data: any) => {
+      player.current?.seekTo(data?.position || 0, "seconds");
+      setPlaying(data?.playing || false);
+      setInitialized(true);
+    },
+  };
+
   ws.addEventListener("message", (event) => {
     const { type, data } = JSON.parse(event.data);
-    // console.log("receviedEvent: ", type, data);
-    switch (type) {
-      case "play":
-        setPlaying(true);
-        break;
-      case "pause":
-        setPlaying(false);
-        break;
-      // hack to overcome the absence of easy ways to
-      // detect the `seek` event.
-      case "buffer":
-        // if it's been 2 seconds since last time we seek-ed.
-        const { position } = JSON.parse(data);
-        if ((new Date() as any) - (lastSeeked as any) > 2000) {
-          lastSeeked = new Date();
-          player.current?.seekTo(position, "seconds");
-          setPlaying(true);
-        }
-        break;
-      case "init":
-        player.current?.seekTo(data?.position || 0, "seconds");
-        setPlaying(data?.playing || false);
-        setInitialized(true);
-        break;
-      default:
-        break;
-    }
+    messageHandlers[type](data);
   });
 
   const sendEvent = async (type: EventType, data?: Object) => {
-    console.log("sentEvent: ", type, data, initialized);
     if (!initialized) {
       return;
     }
