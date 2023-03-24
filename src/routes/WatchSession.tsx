@@ -82,7 +82,7 @@ const WatchSession: React.FC = () => {
             </Button>
           </Tooltip>
         </Box>
-        <VideoPlayer url={url} sessionId={sessionId!} />;
+        <VideoPlayer url={url} />;
       </>
     );
   }

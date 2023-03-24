@@ -1,6 +1,7 @@
 import { Box, Button, Card, IconButton, Stack } from "@mui/material";
 import React, { useRef, useState } from "react";
 import ReactPlayer from "react-player";
+import { debounce } from "../debounce";
 
 interface VideoPlayerProps {
   url: string;
@@ -18,32 +19,17 @@ enum EventType {
   End = "end",
 }
 
-// thank you stackoverflow: https://stackoverflow.com/questions/20281546/how-to-prevent-calling-of-en-event-handler-twice-on-fast-clicks
-// Returns a function, that, as long as it continues to be invoked, will not
-// be triggered. The function will be called after it stops being called for
-// N milliseconds. If `immediate` is passed, trigger the function on the
-// leading edge, instead of the trailing.
-const debounce = function (func: any, wait: any, immediate?: any) {
-  var timeout: any;
-  return function () {
-    var context = this,
-      args = arguments;
-    var later = function () {
-      timeout = null;
-      if (!immediate) func.apply(context, args);
-    };
-    var callNow = immediate && !timeout;
-    clearTimeout(timeout);
-    timeout = setTimeout(later, wait);
-    if (callNow) func.apply(context, args);
-  };
-};
-
 const VideoPlayer: React.FC<VideoPlayerProps> = ({ url, hideControls }) => {
   const [hasJoined, setHasJoined] = useState(false);
   const [playing, setPlaying] = useState(false);
   const [isReady, setIsReady] = useState(false);
   const player = useRef<ReactPlayer>(null);
+
+  const debounced = debounce((data: any) => {
+    console.log("inside debounce");
+    // player.current?.seekTo(data.position, "seconds");
+    // setPlaying(true);
+  }, 2000);
 
   ws.addEventListener("message", (event) => {
     const { type, data } = JSON.parse(event.data);
@@ -57,10 +43,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ url, hideControls }) => {
       // hack to overcome the absence of easy ways to
       // detect the `seek` event.
       case "buffer":
-        debounce(() => {
-          player.current?.seekTo(data.position, "seconds");
-          setPlaying(true);
-        }, 2000);
+        debounced(data);
         break;
       default:
         break;

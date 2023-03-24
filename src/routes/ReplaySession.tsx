@@ -55,7 +55,7 @@ const ReplaySession: React.FC = () => {
             </Button>
           </Tooltip>
         </Box>
-        <VideoPlayer url={url} hideControls sessionId={sessionId!} />
+        <VideoPlayer url={url} hideControls />
       </>
     );
   }
