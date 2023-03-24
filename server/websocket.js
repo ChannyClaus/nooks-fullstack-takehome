@@ -11,6 +11,7 @@ const initWebSocket = function (server) {
     ws.on("error", console.error);
     ws.on("message", function message(payload) {
       const { sessionId, type, data } = JSON.parse(decodeURIComponent(payload));
+      console.log(new Date(), type);
 
       // add the connection to the set
       if (!connectionMap.get(sessionId)) {

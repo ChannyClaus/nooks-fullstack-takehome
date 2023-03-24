@@ -1,45 +1,49 @@
 import { Box, Button, Card, IconButton, Stack } from "@mui/material";
-import axios from "axios";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useRef, useState } from "react";
 import ReactPlayer from "react-player";
 
-const ws = new WebSocket("ws://localhost:8000");
 interface VideoPlayerProps {
   url: string;
-  sessionId: string;
   hideControls?: boolean;
 }
 
+const ws = new WebSocket("ws://localhost:8000");
+
 enum EventType {
+  Ready = "ready",
   Play = "play",
   Pause = "pause",
   Buffer = "buffer",
   Progress = "progress",
   End = "end",
-  Seek = "seek",
 }
 
-const VideoPlayer: React.FC<VideoPlayerProps> = ({
-  url,
-  hideControls,
-  sessionId,
-}) => {
+// thank you stackoverflow: https://stackoverflow.com/questions/20281546/how-to-prevent-calling-of-en-event-handler-twice-on-fast-clicks
+// Returns a function, that, as long as it continues to be invoked, will not
+// be triggered. The function will be called after it stops being called for
+// N milliseconds. If `immediate` is passed, trigger the function on the
+// leading edge, instead of the trailing.
+const debounce = function (func: any, wait: any, immediate?: any) {
+  var timeout: any;
+  return function () {
+    var context = this,
+      args = arguments;
+    var later = function () {
+      timeout = null;
+      if (!immediate) func.apply(context, args);
+    };
+    var callNow = immediate && !timeout;
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+    if (callNow) func.apply(context, args);
+  };
+};
+
+const VideoPlayer: React.FC<VideoPlayerProps> = ({ url, hideControls }) => {
+  const [hasJoined, setHasJoined] = useState(false);
   const [playing, setPlaying] = useState(false);
-  const [seek, setSeek] = useState(0);
   const [isReady, setIsReady] = useState(false);
   const player = useRef<ReactPlayer>(null);
-
-  // query the database on initial load
-  // so those who join the sync later can
-  // retrieve the current state of the session.
-  useEffect(() => {
-    axios.get(`/api/sessions/${sessionId}/current`).then((response) => {
-      if (response.data) {
-        player.current?.seekTo(response.data.playedSeconds, "seconds");
-        setPlaying(response.data.playing);
-      }
-    });
-  }, []);
 
   ws.addEventListener("message", (event) => {
     const { type, data } = JSON.parse(event.data);
@@ -50,61 +54,65 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       case "pause":
         setPlaying(false);
         break;
-      case "seek":
-        player.current?.seekTo(data.seek, "seconds");
+      // hack to overcome the absence of easy ways to
+      // detect the `seek` event.
+      case "buffer":
+        debounce(() => {
+          player.current?.seekTo(data.position, "seconds");
+          setPlaying(true);
+        }, 2000);
         break;
       default:
         break;
     }
   });
 
-  const writeEvent = async function (type: EventType, data?: Object) {
-    ws.send(JSON.stringify({ sessionId, type, data }));
-    return axios.post(`/api/sessions/${sessionId}/events`, {
-      sessionId,
-      type,
-      timestamp: player.current?.getCurrentTime(),
-      data,
-    });
-  };
-
   const handleReady = () => {
     setIsReady(true);
+    ws.send(JSON.stringify({ type: EventType.Ready }));
   };
 
-  const handleSeek = async () => {
+  const handleEnd = () => {
+    ws.send(JSON.stringify({ type: EventType.End }));
+  };
+
+  const handleSeek = (seconds: number) => {
     // Ideally, the seek event would be fired whenever the user moves the built in Youtube video slider to a new timestamp.
     // However, the youtube API no longer supports seek events (https://github.com/cookpete/react-player/issues/356), so this no longer works
 
     // You'll need to find a different way to detect seeks (or just write your own seek slider and replace the built in Youtube one.)
     // Note that when you move the slider, you still get play, pause, buffer, and progress events, can you use those?
-    await writeEvent(EventType.Seek, { seek });
-    player.current?.seekTo(seek, "seconds");
+
+    console.log(
+      "This never prints because seek decetion doesn't work: ",
+      seconds
+    );
   };
 
-  const handleEnd = async () => {
-    await writeEvent(EventType.End);
+  const handlePlay = () => {
+    ws.send(JSON.stringify({ type: EventType.Play }));
   };
 
-  const handlePlay = async () => {
-    await writeEvent(EventType.Play);
+  const handlePause = () => {
+    ws.send(JSON.stringify({ type: EventType.Pause }));
   };
 
-  const handlePause = async () => {
-    await writeEvent(EventType.Pause);
+  const handleBuffer = () => {
+    ws.send(
+      JSON.stringify({
+        type: EventType.Buffer,
+        data: { position: player.current?.getCurrentTime(), playing },
+      })
+    );
   };
 
-  const handleBuffer = async () => {
-    await writeEvent(EventType.Buffer);
-  };
-
-  const handleProgress = async (state: {
+  const handleProgress = (state: {
     played: number;
     playedSeconds: number;
     loaded: number;
     loadedSeconds: number;
   }) => {
-    await writeEvent(EventType.Progress, state);
+    ws.send(JSON.stringify({ type: EventType.Progress, data: state }));
   };
 
   return (
@@ -119,13 +127,13 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       <Box
         width="100%"
         height="100%"
-        display={playing ? "flex" : "none"}
+        display={hasJoined ? "flex" : "none"}
         flexDirection="column"
       >
         <ReactPlayer
           ref={player}
           url={url}
-          playing={playing}
+          playing={hasJoined && playing}
           controls={!hideControls}
           onReady={handleReady}
           onEnded={handleEnd}
@@ -139,14 +147,14 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
           style={{ pointerEvents: hideControls ? "none" : "auto" }}
         />
       </Box>
-      {!playing && isReady && (
+      {!hasJoined && isReady && (
         // Youtube doesn't allow autoplay unless you've interacted with the page already
         // So we make the user click "Join Session" button and then start playing the video immediately after
         // This is necessary so that when people join a session, they can seek to the same timestamp and start watching the video with everyone else
         <Button
           variant="contained"
           size="large"
-          onClick={() => setPlaying(true)}
+          onClick={() => setHasJoined(true)}
         >
           Watch Session
         </Button>
