@@ -8,6 +8,9 @@ interface VideoPlayerProps {
 }
 
 const ws = new WebSocket("ws://localhost:8000");
+ws.onopen = function () {
+  ws.send(JSON.stringify({ type: "init" }));
+};
 
 enum EventType {
   Ready = "ready",
@@ -22,12 +25,17 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ url, hideControls }) => {
   const [hasJoined, setHasJoined] = useState(false);
   const [playing, setPlaying] = useState(false);
   const [isReady, setIsReady] = useState(false);
+  // used to make sure that no update is sent to the
+  // server from this instance until initialization is complete.
+  const [initialized, setInitialized] = useState(false);
   const player = useRef<ReactPlayer>(null);
 
   // used to prevent `seek` handler from firing too rapidly.
   var lastSeeked = new Date();
+
   ws.addEventListener("message", (event) => {
     const { type, data } = JSON.parse(event.data);
+    console.log("receviedEvent: ", type, data);
     switch (type) {
       case "play":
         setPlaying(true);
@@ -38,24 +46,38 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ url, hideControls }) => {
       // hack to overcome the absence of easy ways to
       // detect the `seek` event.
       case "buffer":
+        // if it's been 2 seconds since last time we seek-ed.
         if ((new Date() as any) - (lastSeeked as any) > 2000) {
           lastSeeked = new Date();
           player.current?.seekTo(data.position, "seconds");
           setPlaying(true);
         }
         break;
+      case "init":
+        player.current?.seekTo(data?.position || 0, "seconds");
+        setPlaying(data?.playing || false);
+        setInitialized(true);
+        break;
       default:
         break;
     }
   });
 
+  const sendEvent = async (type: EventType, data?: Object) => {
+    console.log("sentEvent: ", type, data, initialized);
+    if (!initialized) {
+      return;
+    }
+    ws.send(JSON.stringify({ type, data }));
+  };
+
   const handleReady = () => {
     setIsReady(true);
-    ws.send(JSON.stringify({ type: EventType.Ready }));
+    sendEvent(EventType.Ready);
   };
 
   const handleEnd = () => {
-    ws.send(JSON.stringify({ type: EventType.End }));
+    sendEvent(EventType.End);
   };
 
   const handleSeek = (seconds: number) => {
@@ -72,18 +94,19 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ url, hideControls }) => {
   };
 
   const handlePlay = () => {
-    ws.send(JSON.stringify({ type: EventType.Play }));
+    sendEvent(EventType.Play);
   };
 
   const handlePause = () => {
-    ws.send(JSON.stringify({ type: EventType.Pause }));
+    sendEvent(EventType.Pause);
   };
 
   const handleBuffer = () => {
-    ws.send(
+    sendEvent(
+      EventType.Buffer,
       JSON.stringify({
-        type: EventType.Buffer,
-        data: { position: player.current?.getCurrentTime(), playing },
+        position: player.current?.getCurrentTime(),
+        playing,
       })
     );
   };
@@ -94,7 +117,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ url, hideControls }) => {
     loaded: number;
     loadedSeconds: number;
   }) => {
-    ws.send(JSON.stringify({ type: EventType.Progress, data: state }));
+    sendEvent(EventType.Progress, JSON.stringify(state));
   };
 
   return (

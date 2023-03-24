@@ -4,14 +4,45 @@ const { WebSocketServer } = require("ws");
 // set of websocket connections.
 const connectionMap = new Map();
 
+// keeps track of where in the video
+// the session is at + whether or not it's currently playing
+const sessionStateMap = new Map();
+
 const initWebSocket = function (server) {
   const wss = new WebSocketServer({ server });
 
   wss.on("connection", function connection(ws) {
     ws.on("error", console.error);
+
     ws.on("message", function message(payload) {
       const { sessionId, type, data } = JSON.parse(decodeURIComponent(payload));
-      console.log(new Date(), type);
+
+      // update the state
+      if (!sessionStateMap.get(sessionId)) {
+        sessionStateMap.set(sessionId, { playing: false, position: 0 });
+      }
+      const updatedState = Object.assign(sessionStateMap.get(sessionId), {});
+      console.log(new Date(), type, updatedState);
+      switch (type) {
+        case "progress":
+          updatedState["position"] = JSON.parse(data).playedSeconds;
+          break;
+        case "play":
+          updatedState["playing"] = true;
+          break;
+        case "pause":
+          updatedState["playing"] = false;
+          break;
+        default:
+          break;
+      }
+      sessionStateMap.set(sessionId, updatedState);
+
+      // send state for initialization
+      if (type === "init") {
+        ws.send(JSON.stringify({ type: "init", data: updatedState }));
+        return;
+      }
 
       // add the connection to the set
       if (!connectionMap.get(sessionId)) {
